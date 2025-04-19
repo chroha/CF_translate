@@ -1,76 +1,33 @@
-// V2.0
+// index.js
 export default {
   async fetch(request, env, ctx) {
     const { searchParams } = new URL(request.url);
     const password = searchParams.get("password") || "";
-    const isJson = searchParams.get("api") === "true";
 
     // 密码验证
     if (env.PASSWORD && password !== env.PASSWORD) {
-      return new Response(
-        <html><head><title>请输入密码</title><meta charset="utf-8" />
-        <style>
-          body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f2f2f2; }
-          .box { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-          input { padding: 10px; width: 100%; margin-top: 10px; }
-          button { padding: 10px; width: 100%; margin-top: 10px; background: #007bff; color: white; border: none; }
-        </style>
-        </head><body>
-        <div class="box">
-          <h3>请输入密码以进入翻译工具</h3>
-          <input id="pwd" type="password" placeholder="Password" />
-          <button onclick="check()">进入 / Go</button>
-        </div>
-        <script>
-          function check() {
-            const pwd = document.getElementById('pwd').value.trim();
-            if (pwd) {
-              location.href = "/?password=" + encodeURIComponent(pwd);
-            }
-          }
-        <\/script>
-        </body></html>
-      , { headers: { "Content-Type": "text/html;charset=utf-8" }, status: 401 });
+      return new Response("未授权 / Unauthorized", { status: 401 });
     }
 
-    // 翻译参数
+    // 如果包含翻译参数，执行翻译功能
     const text = searchParams.get("text") || "";
     const source = searchParams.get("source_language") || "";
     const target = searchParams.get("target_language") || "";
 
     if (text && source && target) {
-      const inputs = { text, source_lang: source, target_lang: target };
+      const inputs = {
+        text,
+        source_lang: source,
+        target_lang: target,
+      };
+
       const aiResponse = await env.AI.run("@cf/meta/m2m100-1.2b", inputs);
 
-      if (isJson) {
-        return Response.json({ input: inputs, output: aiResponse });
-      }
-
-      return new Response(
-        <html>
-          <head><meta charset="UTF-8"><title>翻译结果</title></head>
-          <body style="font-family: sans-serif; padding: 20px;">
-            <h2>翻译结果</h2>
-            <p><strong>原文：</strong> ${text}</p>
-            <p><strong>源语言：</strong> ${source}</p>
-            <p><strong>目标语言：</strong> ${target}</p>
-            <p><strong>翻译：</strong> ${aiResponse.translated_text}</p>
-            <h3>Token 用量</h3>
-            <ul>
-              <li>Prompt Tokens：${aiResponse.usage?.prompt_tokens ?? "-"}</li>
-              <li>Completion Tokens：${aiResponse.usage?.completion_tokens ?? "-"}</li>
-              <li>Total Tokens：${aiResponse.usage?.total_tokens ?? "-"}</li>
-            </ul>
-            <a href="/?password=${encodeURIComponent(password)}">返回</a>
-          </body>
-        </html>
-      , {
-        headers: { "Content-Type": "text/html;charset=UTF-8" }
-      });
+      return Response.json({ input: inputs, output: aiResponse });
     }
 
-    // HTML 页面
-    const html = 
+    // 否则返回 HTML 页面
+    const html = `
 <!DOCTYPE html>
 <html>
   <head>
@@ -125,9 +82,6 @@ export default {
       <input type="text" id="text" placeholder="请输入要翻译的文本" />
       <input type="text" id="sourceLang" placeholder="源语言（如 zh）" />
       <input type="text" id="targetLang" placeholder="目标语言（如 en）" />
-      <label style="display:block;margin:10px 0;text-align:left;">
-        <input type="checkbox" id="apiCheckbox" /> API JSON 输出
-      </label>
       <button onclick="submitTranslation()">翻译 / Translate</button>
     </div>
 
@@ -137,7 +91,6 @@ export default {
         const text = document.getElementById("text").value.trim();
         const sourceLang = document.getElementById("sourceLang").value.trim();
         const targetLang = document.getElementById("targetLang").value.trim();
-        const api = document.getElementById("apiCheckbox").checked;
         if (!text || !sourceLang || !targetLang) {
           alert("请填写所有字段");
           return;
@@ -147,14 +100,13 @@ export default {
           text: text,
           source_language: sourceLang,
           target_language: targetLang
-        });
-        if (api) query.set("api", "true");
-        window.location.href = "/?" + query.toString();
+        }).toString();
+        window.location.href = "/?" + query;
       }
     </script>
   </body>
 </html>
-    ;
+    `;
 
     return new Response(html, {
       headers: { "content-type": "text/html;charset=UTF-8" },
