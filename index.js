@@ -2,7 +2,7 @@ export default {
   async fetch(request, env, ctx) {
     const { searchParams } = new URL(request.url);
     const password = searchParams.get("password") || "";
-    const isJson = searchParams.get("api") === "true";
+    const apiMode = searchParams.get("api") === "true";
 
     // 密码验证
     if (env.PASSWORD && password !== env.PASSWORD) {
@@ -32,43 +32,37 @@ export default {
       `, { headers: { "Content-Type": "text/html;charset=utf-8" }, status: 401 });
     }
 
-    // 翻译参数
+    // 翻译逻辑
     const text = searchParams.get("text") || "";
     const source = searchParams.get("source_language") || "";
     const target = searchParams.get("target_language") || "";
 
     if (text && source && target) {
-      const inputs = { text, source_lang: source, target_lang: target };
+      const inputs = {
+        text,
+        source_lang: source,
+        target_lang: target,
+      };
+
       const aiResponse = await env.AI.run("@cf/meta/m2m100-1.2b", inputs);
 
-      if (isJson) {
+      if (apiMode) {
         return Response.json({ input: inputs, output: aiResponse });
       }
 
       return new Response(`
-        <html>
-          <head><meta charset="UTF-8"><title>翻译结果</title></head>
-          <body style="font-family: sans-serif; padding: 20px;">
-            <h2>翻译结果</h2>
-            <p><strong>原文：</strong> ${text}</p>
-            <p><strong>源语言：</strong> ${source}</p>
-            <p><strong>目标语言：</strong> ${target}</p>
-            <p><strong>翻译：</strong> ${aiResponse.translated_text}</p>
-            <h3>Token 用量</h3>
-            <ul>
-              <li>Prompt Tokens：${aiResponse.usage?.prompt_tokens ?? "-"}</li>
-              <li>Completion Tokens：${aiResponse.usage?.completion_tokens ?? "-"}</li>
-              <li>Total Tokens：${aiResponse.usage?.total_tokens ?? "-"}</li>
-            </ul>
-            <a href="/?password=${encodeURIComponent(password)}">返回</a>
-          </body>
-        </html>
-      `, {
-        headers: { "Content-Type": "text/html;charset=UTF-8" }
-      });
+        <html><head><meta charset="utf-8" /><title>翻译结果</title></head><body>
+        <h2>翻译结果：</h2>
+        <pre>${aiResponse.translated_text || JSON.stringify(aiResponse)}</pre>
+        <p><strong>Prompt tokens:</strong> ${aiResponse.usage?.prompt_tokens || 0} | 
+        <strong>Completion tokens:</strong> ${aiResponse.usage?.completion_tokens || 0} | 
+        <strong>Total:</strong> ${aiResponse.usage?.total_tokens || 0}</p>
+        <a href="/?password=${encodeURIComponent(password)}">返回</a>
+        </body></html>
+      `, { headers: { "content-type": "text/html;charset=UTF-8" } });
     }
 
-    // HTML 页面
+    // 初始页面 HTML
     const html = `
 <!DOCTYPE html>
 <html>
@@ -94,7 +88,7 @@ export default {
         width: 90%;
         text-align: center;
       }
-      input, select {
+      input, select, textarea {
         width: 100%;
         padding: 12px;
         margin: 10px 0;
@@ -115,6 +109,12 @@ export default {
       button:hover {
         background-color: #0056b3;
       }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+      }
     </style>
   </head>
   <body>
@@ -124,31 +124,48 @@ export default {
       <input type="text" id="text" placeholder="请输入要翻译的文本" />
       <input type="text" id="sourceLang" placeholder="源语言（如 zh）" />
       <input type="text" id="targetLang" placeholder="目标语言（如 en）" />
-      <label style="display:block;margin:10px 0;text-align:left;">
-        <input type="checkbox" id="apiCheckbox" /> API JSON 输出
-      </label>
+      <div class="row">
+        <input type="checkbox" id="apiCheckbox" />
+        <label for="apiCheckbox">API JSON 输出</label>
+      </div>
       <button onclick="submitTranslation()">翻译 / Translate</button>
+      <textarea id="resultBox" rows="4" readonly placeholder="翻译结果将在此显示"></textarea>
+      <p id="tokenInfo"></p>
     </div>
 
     <script>
-      function submitTranslation() {
+      async function submitTranslation() {
         const pwd = new URLSearchParams(window.location.search).get("password") || "";
         const text = document.getElementById("text").value.trim();
         const sourceLang = document.getElementById("sourceLang").value.trim();
         const targetLang = document.getElementById("targetLang").value.trim();
         const api = document.getElementById("apiCheckbox").checked;
+
         if (!text || !sourceLang || !targetLang) {
           alert("请填写所有字段");
           return;
         }
+
         const query = new URLSearchParams({
           password: pwd,
+          api: api ? "true" : "false",
           text: text,
           source_language: sourceLang,
           target_language: targetLang
-        });
-        if (api) query.set("api", "true");
-        window.location.href = "/?" + query.toString();
+        }).toString();
+
+        if (api) {
+          window.location.href = "/?" + query;
+        } else {
+          const res = await fetch("/?" + query);
+          const html = await res.text();
+          const match = html.match(/<pre>([\s\S]*?)<\/pre>/);
+          const tokens = html.match(/Prompt tokens:\/strong> (\d+).*?Completion tokens:\/strong> (\d+).*?Total:\/strong> (\d+)/);
+          document.getElementById("resultBox").value = match ? match[1] : "未找到翻译结果";
+          if (tokens) {
+            document.getElementById("tokenInfo").innerText = `Prompt: ${tokens[1]}, Completion: ${tokens[2]}, Total: ${tokens[3]}`;
+          }
+        }
       }
     </script>
   </body>
