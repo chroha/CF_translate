@@ -23,8 +23,9 @@ export default {
         <script>
           function check() {
             const pwd = document.getElementById('pwd').value.trim();
+            const api = document.getElementById('apiCheckbox')?.checked;
             if (pwd) {
-              location.href = "/?password=" + encodeURIComponent(pwd);
+              location.href = "/?password=" + encodeURIComponent(pwd) + (api ? "&api=true" : "");
             }
           }
         <\/script>
@@ -162,7 +163,7 @@ export default {
           }
         }
       }
-    </script>
+    <\/script>
   </body>
 </html>
     `;
