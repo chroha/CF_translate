@@ -1,8 +1,38 @@
+// index.js
+export default {
+  async fetch(request, env, ctx) {
+    const { searchParams } = new URL(request.url);
+    const password = searchParams.get("password") || "";
+
+    // 密码验证
+    if (env.PASSWORD && password !== env.PASSWORD) {
+      return new Response("未授权 / Unauthorized", { status: 401 });
+    }
+
+    // 如果包含翻译参数，执行翻译功能
+    const text = searchParams.get("text") || "";
+    const source = searchParams.get("source_language") || "";
+    const target = searchParams.get("target_language") || "";
+
+    if (text && source && target) {
+      const inputs = {
+        text,
+        source_lang: source,
+        target_lang: target,
+      };
+
+      const aiResponse = await env.AI.run("@cf/meta/m2m100-1.2b", inputs);
+
+      return Response.json({ input: inputs, output: aiResponse });
+    }
+
+    // 否则返回 HTML 页面
+    const html = `
+<!DOCTYPE html>
 <html>
   <head>
-    <title>翻译页面 | Translator</title>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>翻译页面</title>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -76,3 +106,10 @@
     </script>
   </body>
 </html>
+    `;
+
+    return new Response(html, {
+      headers: { "content-type": "text/html;charset=UTF-8" },
+    });
+  },
+};
