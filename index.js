@@ -7,7 +7,7 @@ export default {
 
     // 密码验证
     if (env.PASSWORD && password !== env.PASSWORD) {
-      return new Response(
+      return new Response(`
         <html><head><title>请输入密码</title><meta charset="utf-8" />
         <style>
           body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f2f2f2; }
@@ -30,23 +30,27 @@ export default {
           }
         <\/script>
         </body></html>
-      , { headers: { "Content-Type": "text/html;charset=utf-8" }, status: 401 });
+      `, { headers: { "Content-Type": "text/html;charset=utf-8" }, status: 401 });
     }
 
-    // 翻译参数
     const text = searchParams.get("text") || "";
     const source = searchParams.get("source_language") || "";
     const target = searchParams.get("target_language") || "";
 
     if (text && source && target) {
-      const inputs = { text, source_lang: source, target_lang: target };
+      const inputs = {
+        text,
+        source_lang: source,
+        target_lang: target,
+      };
+
       const aiResponse = await env.AI.run("@cf/meta/m2m100-1.2b", inputs);
 
       if (isJson) {
         return Response.json({ input: inputs, output: aiResponse });
       }
 
-      return new Response(
+      return new Response(`
         <html>
           <head><meta charset="UTF-8"><title>翻译结果</title></head>
           <body style="font-family: sans-serif; padding: 20px;">
@@ -64,13 +68,13 @@ export default {
             <a href="/?password=${encodeURIComponent(password)}">返回</a>
           </body>
         </html>
-      , {
+      `, {
         headers: { "Content-Type": "text/html;charset=UTF-8" }
       });
     }
 
-    // HTML 页面
-    const html = 
+    // 返回输入页面
+    const html = `
 <!DOCTYPE html>
 <html>
   <head>
@@ -125,9 +129,7 @@ export default {
       <input type="text" id="text" placeholder="请输入要翻译的文本" />
       <input type="text" id="sourceLang" placeholder="源语言（如 zh）" />
       <input type="text" id="targetLang" placeholder="目标语言（如 en）" />
-      <label style="display:block;margin:10px 0;text-align:left;">
-        <input type="checkbox" id="apiCheckbox" /> API JSON 输出
-      </label>
+      <label style="display:block; text-align:left;"><input type="checkbox" id="apiCheckbox" /> API JSON 输出</label>
       <button onclick="submitTranslation()">翻译 / Translate</button>
     </div>
 
@@ -138,10 +140,12 @@ export default {
         const sourceLang = document.getElementById("sourceLang").value.trim();
         const targetLang = document.getElementById("targetLang").value.trim();
         const api = document.getElementById("apiCheckbox").checked;
+
         if (!text || !sourceLang || !targetLang) {
           alert("请填写所有字段");
           return;
         }
+
         const query = new URLSearchParams({
           password: pwd,
           text: text,
@@ -149,12 +153,12 @@ export default {
           target_language: targetLang
         });
         if (api) query.set("api", "true");
+
         window.location.href = "/?" + query.toString();
       }
     </script>
   </body>
-</html>
-    ;
+</html>`;
 
     return new Response(html, {
       headers: { "content-type": "text/html;charset=UTF-8" },
