@@ -56,17 +56,11 @@ export default {
           <body>
             <div class="card">
               <h2>请输入密码访问翻译服务</h2>
-              <input type="password" id="pwd" placeholder="Password" />
-              <button onclick="submitPassword()">提交</button>
+              <form method="GET">
+                <input type="password" name="password" placeholder="Password" />
+                <button type="submit">提交</button>
+              </form>
             </div>
-            <script>
-              function submitPassword() {
-                const pwd = document.getElementById('pwd').value.trim();
-                const params = new URLSearchParams(window.location.search);
-                params.set('password', pwd);
-                window.location.search = params.toString();
-              }
-            <\/script>
           </body>
         </html>
       `, {
@@ -143,11 +137,11 @@ export default {
                 const target = document.getElementById('target_language').value;
                 const pwd = new URLSearchParams(window.location.search).get('password');
                 if (text && source && target) {
-                  const query = `?text=${encodeURIComponent(text)}&source_language=${source}&target_language=${target}&password=${encodeURIComponent(pwd)}`;
+                  const query = `?text=${encodeURIComponent(text)}&source_language=${encodeURIComponent(source)}&target_language=${encodeURIComponent(target)}&password=${encodeURIComponent(pwd)}`;
                   window.location.href = query;
                 }
               }
-            <\/script>
+            </script>
           </body>
         </html>
       `, {
