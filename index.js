@@ -114,6 +114,7 @@ export default {
         align-items: center;
         justify-content: flex-start;
         gap: 8px;
+        margin-bottom: 10px;
       }
     </style>
   </head>
@@ -146,13 +147,7 @@ export default {
           return;
         }
 
-        const query = new URLSearchParams({
-          password: pwd,
-          api: api ? "true" : "false",
-          text: text,
-          source_language: sourceLang,
-          target_language: targetLang
-        }).toString();
+        const query = `password=${encodeURIComponent(pwd)}${api ? "&api=true" : ""}&text=${encodeURIComponent(text)}&source_language=${encodeURIComponent(sourceLang)}&target_language=${encodeURIComponent(targetLang)}`;
 
         if (api) {
           window.location.href = "/?" + query;
