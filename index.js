@@ -1,4 +1,4 @@
-// V2.0
+// V2.1
 export default {
   async fetch(request, env, ctx) {
     const { searchParams } = new URL(request.url);
@@ -51,17 +51,14 @@ export default {
           <head><meta charset="UTF-8"><title>翻译结果</title></head>
           <body style="font-family: sans-serif; padding: 20px;">
             <h2>翻译结果</h2>
-            <p><strong>原文：</strong> ${text}</p>
-            <p><strong>源语言：</strong> ${source}</p>
-            <p><strong>目标语言：</strong> ${target}</p>
-            <p><strong>翻译：</strong> ${aiResponse.translated_text}</p>
-            <h3>Token 用量</h3>
-            <ul>
-              <li>Prompt Tokens：${aiResponse.usage?.prompt_tokens ?? "-"}</li>
-              <li>Completion Tokens：${aiResponse.usage?.completion_tokens ?? "-"}</li>
-              <li>Total Tokens：${aiResponse.usage?.total_tokens ?? "-"}</li>
-            </ul>
-            <a href="/?password=${encodeURIComponent(password)}">返回</a>
+            <textarea style="width:100%;height:100px;padding:10px;">${aiResponse.translated_text}</textarea>
+            <div style="margin-top:10px;">
+              <strong>Token 用量：</strong><br/>
+              Prompt Tokens：${aiResponse.usage?.prompt_tokens ?? "-"}<br/>
+              Completion Tokens：${aiResponse.usage?.completion_tokens ?? "-"}<br/>
+              Total Tokens：${aiResponse.usage?.total_tokens ?? "-"}
+            </div>
+            <br/><a href="/?password=${encodeURIComponent(password)}">返回</a>
           </body>
         </html>
       `, {
@@ -69,7 +66,7 @@ export default {
       });
     }
 
-    // HTML 页面
+    // 默认首页 HTML 页面
     const html = `
 <!DOCTYPE html>
 <html>
@@ -95,7 +92,7 @@ export default {
         width: 90%;
         text-align: center;
       }
-      input, select {
+      input, select, textarea {
         width: 100%;
         padding: 12px;
         margin: 10px 0;
@@ -125,10 +122,15 @@ export default {
       <input type="text" id="text" placeholder="请输入要翻译的文本" />
       <input type="text" id="sourceLang" placeholder="源语言（如 zh）" />
       <input type="text" id="targetLang" placeholder="目标语言（如 en）" />
-      <label style="display:block;margin:10px 0;text-align:left;">
-        <input type="checkbox" id="apiCheckbox" /> API JSON 输出
+
+      <label style="display:flex;align-items:center;gap:8px;margin:10px 0;text-align:left;">
+        <input type="checkbox" id="apiCheckbox" /> <span>API JSON 输出</span>
       </label>
+
       <button onclick="submitTranslation()">翻译 / Translate</button>
+
+      <textarea id="resultBox" placeholder="翻译结果显示在这里" style="width:100%;height:100px;margin-top:10px;padding:10px;font-size:14px;"></textarea>
+      <div id="tokenInfo" style="text-align:left;margin-top:10px;font-size:14px;color:#555;"></div>
     </div>
 
     <script>
@@ -142,13 +144,15 @@ export default {
           alert("请填写所有字段");
           return;
         }
+
         const query = new URLSearchParams({
-          password: pwd,
-          text: text,
+          text,
           source_language: sourceLang,
-          target_language: targetLang
+          target_language: targetLang,
+          password: pwd
         });
-        if (api) query.set("api", "true");
+        if (api) query.append("api", "true");
+
         window.location.href = "/?" + query.toString();
       }
     </script>
