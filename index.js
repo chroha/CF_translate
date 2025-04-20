@@ -1,8 +1,9 @@
 // V2.0
 export default {
   async fetch(request, env, ctx) {
-    const { searchParams } = new URL(request.url);
-    
+    const url = new URL(request.url); 
+    const { searchParams } = url;
+
     // ⏱️ UptimeFlare 检查路径，不走密码
     if (url.pathname === "/uptime-check") {
       return new Response("OK", { status: 200 });
