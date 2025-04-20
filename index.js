@@ -2,6 +2,12 @@
 export default {
   async fetch(request, env, ctx) {
     const { searchParams } = new URL(request.url);
+    
+    // ⏱️ UptimeFlare 检查路径，不走密码
+    if (url.pathname === "/uptime-check") {
+      return new Response("OK", { status: 200 });
+    }
+    
     const password = searchParams.get("password") || "";
     const isJson = searchParams.get("api") === "true";
 
